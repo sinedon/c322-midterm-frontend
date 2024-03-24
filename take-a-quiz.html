@@ -3,9 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Take a Quiz</title>
+  <link rel="stylesheet" href="navbar.css">
+  <link rel="stylesheet" href="general.css">
+  <link rel="stylesheet" href="cards.css">
 </head>
 <body>
-  
+  <ul class="topnav">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="add-question.html">Add questions</a></li>
+    <li><a href="make-a-quiz.html">Create a quiz</a></li>
+    <li><a class="active" href="take-a-quiz.html">Take a quiz</a></li>
+    <li class="right"><a href="#about">About</a></li>
+  </ul>
+
+  <div class="container">
+    <h2>Here are the list of all available quizzes. Click on a quiz to start taking a quiz.</h2>
+    <div class="cards" id="quizzesContainer">
+      <!-- Quizzes will be dynamically added here -->
+    </div>
+  </div>
+
+  <script>
+    // Fetch quizzes from the backend
+    async function fetchQuizzes() {
+      try {
+        const response = await fetch('http://localhost:8080/quizzes');
+        if (!response.ok) {
+          throw new Error('Failed to fetch quizzes');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    }
+
+    // Function to display quizzes
+    function displayQuizzes(quizzes) {
+      const quizzesContainer = document.getElementById('quizzesContainer');
+      quizzes.forEach(quiz => {
+        const quizCard = document.createElement('div');
+        quizCard.className = 'card';
+        quizCard.innerHTML = `
+          <div class="container">
+            <h4><b>${quiz.title}</b></h4>
+            <p>Number of questions: ${quiz.questionIds.length}</p>
+            <button onclick="startQuiz(${quiz.id})">Start Quiz</button>
+          </div>
+        `;
+        quizzesContainer.appendChild(quizCard);
+      });
+    }
+
+    // Function to start a quiz
+    function startQuiz(quizId) {
+      // Redirect to quiz page passing quizId
+      window.location.href = `quiz.html?quizId=${quizId}`;
+    }
+
+    // Load quizzes when the page loads
+    window.onload = async () => {
+      const quizzes = await fetchQuizzes();
+      if (quizzes) {
+        displayQuizzes(quizzes);
+      } else {
+        // Display an error message if quizzes couldn't be loaded
+        const quizzesContainer = document.getElementById('quizzesContainer');
+        quizzesContainer.innerHTML = '<p>Failed to load quizzes. Please try again later.</p>';
+      }
+    };
+  </script>
 </body>
 </html>
+
+
+
+

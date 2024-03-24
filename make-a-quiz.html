@@ -3,9 +3,164 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Create a Quiz</title>
+  <link rel="stylesheet" href="navbar.css">
+  <link rel="stylesheet" href="general.css">
+  <link rel="stylesheet" href="cards.css">
+  <link rel="stylesheet" href="make-a-quiz.css">
 </head>
 <body>
-  
+  <ul class="topnav">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="add-question.html">Add questions</a></li>
+    <li><a class="active" href="make-a-quiz.html">Create a quiz</a></li>
+    <li><a href="take-a-quiz.html">Take a quiz</a></li>
+    <li class="right"><a href="#about">About</a></li>
+  </ul>
+
+  <form id="quizForm">
+    <!-- Questions Bank -->
+    <h3>Questions Bank</h3>
+    <div id="questionsBank" class="cards">
+      <!-- Questions from the database displayed here -->
+    </div>
+  </form>
+
+  <form id="SelectedQuestionsForm">
+    <!-- Quiz Title -->
+    <label for="quizTitle">Quiz Title:</label><br>
+    <input type="text" id="quizTitle" name="quizTitle" required><br><br>
+    <!-- Selected Questions -->
+    <h3>Selected Questions</h3>
+    <div id="selectedQuestions" class="cards">
+    </div>
+    <!-- Buttons -->
+    <button type="button" onclick="saveQuiz()">Save your changes</button>
+    <button type="button" onclick="saveAndStartNew()">Save this quiz and start a new one</button>
+  </form>
+
+  <script>
+    let host = "http://localhost:8080";
+    let selectedQuestions = [];
+
+    async function getAllQuestions() {
+        let response = await fetch(host + "/questions");
+        let questions = await response.json();
+        return questions;
+    }
+
+    async function displayQuestionsBank() {
+        let questions = await getAllQuestions();
+        let questionsBank = document.getElementById("questionsBank");
+        questionsBank.innerHTML = "";
+
+        // Display each question in the questions bank
+        questions.forEach(question => {
+            let div = document.createElement("div");
+            div.className = "card";
+            // Display the question details
+            div.innerHTML = `
+                <div class="container">
+                    <h4><b>${question.id}</b></h4>
+                    <p>${question.description}</p>
+                    <img src="${host}/questions/${question.id}/image" alt="Question Image" style="width: 100%; max-width: 200px;">
+                    <h5>Possible Answers:</h5>
+                    <ul>
+                        ${question.choices.map(choice => `<li>${choice}</li>`).join('')}
+                    </ul>
+                    <!-- Add button to select this question -->
+                    <button type="button" onclick="addQuestionToQuiz(${question.id})">Add to Quiz</button>
+                </div>
+            `;
+            questionsBank.appendChild(div);
+        });
+    }
+
+    function addQuestionToQuiz(questionId) {
+        let question = selectedQuestions.find(q => q.id === questionId);
+        if (!question) {
+            selectedQuestions.push({ id: questionId });
+            displaySelectedQuestions();
+        }
+    }
+
+    function displaySelectedQuestions() {
+        let selectedQuestionsDiv = document.getElementById("selectedQuestions");
+        selectedQuestionsDiv.innerHTML = "";
+        // Display each selected question
+        selectedQuestions.forEach(question => {
+            let div = document.createElement("div");
+            div.className = "card";
+            div.innerHTML = `
+                <div class="container">
+                    <h4><b>${question.id}</b></h4>
+                    <!-- Add button to remove this question -->
+                    <button type="button" onclick="removeQuestionFromQuiz(${question.id})">Remove from Quiz</button>
+                </div>
+            `;
+            selectedQuestionsDiv.appendChild(div);
+        });
+    }
+
+    function removeQuestionFromQuiz(questionId) {
+        selectedQuestions = selectedQuestions.filter(q => q.id !== questionId);
+        displaySelectedQuestions();
+    }
+
+    // Save the quiz to the database
+    async function saveQuiz() {
+        let quizTitle = document.getElementById("quizTitle").value;
+        if (!quizTitle) {
+            alert("Please provide a title for the quiz.");
+            return;
+        }
+
+        let quiz = {
+            title: quizTitle,
+            questionIds: selectedQuestions.map(q => q.id)
+        };
+
+        let method = "POST";
+        let quizId = localStorage.getItem("quizId");
+        if (quizId) {
+            method = "PUT";
+            host += "/quizzes/" + quizId;
+            localStorage.removeItem("quizId");
+        }
+
+        let request = {
+            method: method,
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(quiz)
+        };
+
+        let response = await fetch(host + "/quizzes", request);
+        if (response.status === 200) {
+            alert("Quiz saved successfully!");
+        } else {
+            alert("Failed to save quiz.");
+        }
+    }
+
+    function saveAndStartNew() {
+      saveQuiz()
+        .then(() => {
+            // Clear the quizId from localStorage
+            localStorage.removeItem("quizId");
+            // Reload the page to start a new quiz
+            location.reload();
+        })
+        .catch(error => {
+            console.error("Failed to save the quiz:", error);
+            alert("Failed to save the quiz. Please try again.");
+        });
+    }
+
+    window.onload = async () => {
+        await displayQuestionsBank();
+    };
+  </script>
 </body>
 </html>

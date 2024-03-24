@@ -3,9 +3,187 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>Quiz</title>
+  <link rel="stylesheet" href="navbar.css">
+  <link rel="stylesheet" href="quiz.css">
+  <style>
+    .topnav {
+      display: none; /* Initially hide the navigation bar */
+    }
+  </style>
 </head>
 <body>
-  
+  <ul class="topnav">
+    <li><a href="index.html">Home</a></li>
+    <li><a href="add-question.html">Add questions</a></li>
+    <li><a class="active" href="make-a-quiz.html">Create a quiz</a></li>
+    <li><a href="take-a-quiz.html">Take a quiz</a></li>
+    <li class="right"><a href="#about">About</a></li>
+  </ul>
+
+  <div class="container">
+    <h1>Quiz</h1>
+    <div id="questionContainer">
+      <!-- The question and its associated image will be displayed here -->
+    </div>
+    <div id="buttonsContainer">
+      <button id="previousBtn" style="display: none;" onclick="navigateQuestion('previous')">Previous</button>
+      <button id="nextBtn" onclick="navigateQuestion('next')">Next</button>
+      <button id="submitAnswerBtn" style="display: none;" onclick="submitOrScore()">Submit Answer</button>
+    </div>
+    <div id="scoreContainer" style="display: none;"></div>
+  </div>
+
+  <script>
+    const host = "http://localhost:8080"; // Backend host URL
+    let quizData = null;
+    let currentQuestionIndex = 0;
+    let selectedAnswers = [];
+
+    // Function to fetch the quiz from the backend based on quizId
+    async function fetchQuizById(quizId) {
+      try {
+        const response = await fetch(`${host}/quizzes/${quizId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch the quiz');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    }
+
+    // Function to fetch the question details by ID
+    async function fetchQuestionById(questionId) {
+      try {
+        const response = await fetch(`${host}/questions/${questionId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch question details');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    }
+
+    // Function to display the current question with its image
+    async function displayQuestion() {
+      const questionContainer = document.getElementById('questionContainer');
+      const scoreContainer = document.getElementById('scoreContainer');
+      const buttonsContainer = document.getElementById('buttonsContainer');
+      const navBar = document.querySelector('.topnav');
+
+      if (currentQuestionIndex < quizData.questions.length) {
+        const { description, image, choices } = quizData.questions[currentQuestionIndex];
+        questionContainer.innerHTML = `
+          <h2>${description}</h2>
+          <img src="${host}/questions/${quizData.questions[currentQuestionIndex].id}/image" alt="Question Image" style="width: 100%; max-width: 200px;">
+          <h3>Choices:</h3>
+          <ul>
+            ${choices.map(choice => `<li><input type="radio" name="answer" value="${choice}" onclick="selectAnswer(this)">${choice}</li>`).join('')}
+          </ul>
+        `;
+        updateButtonsVisibility();
+      } else {
+        // Hide question container and buttons
+        questionContainer.style.display = 'none';
+        buttonsContainer.style.display = 'none';
+
+        // Display the score container
+        const score = calculateScore();
+        scoreContainer.innerHTML = `<h2>Quiz completed: ${quizData.title}</h2><p>Your score: ${score}/${quizData.questions.length}</p>`;
+        scoreContainer.style.display = 'block';
+
+        // Display the navigation bar
+        navBar.style.display = 'block';
+      }
+    }
+
+    function selectAnswer(radioButton) {
+      selectedAnswers[currentQuestionIndex] = radioButton.value;
+    }
+
+  // Function to calculate the score
+    function calculateScore() {
+      let score = 0;
+      quizData.questions.forEach((question, index) => {
+        if (question.answer === selectedAnswers[index]) {
+          score++;
+        }
+      });
+      return score;
+    }
+
+    // Function to navigate between questions
+    function navigateQuestion(direction) {
+      if (direction === 'previous') {
+        currentQuestionIndex--;
+      } else {
+        currentQuestionIndex++;
+      }
+      displayQuestion();
+    }
+
+
+    // Function to update the visibility of navigation buttons
+    function updateButtonsVisibility() {
+      const previousBtn = document.getElementById('previousBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      if (currentQuestionIndex === 0) {
+        previousBtn.style.display = 'none';
+      } else {
+        previousBtn.style.display = 'inline-block';
+      }
+      if (currentQuestionIndex === quizData.questions.length - 1) {
+        nextBtn.textContent = 'Submit';
+      } else {
+        nextBtn.textContent = 'Next';
+      }
+    }
+
+    // Function to submit the selected answer or display the score
+    function submitOrScore() {
+      if (currentQuestionIndex === quizData.questions.length - 1) {
+        // Calculate the score
+        const score = calculateScore();
+
+        // Display the score
+        const scoreContainer = document.getElementById('scoreContainer');
+        scoreContainer.innerHTML = `<p>Quiz completed! Your score: ${score}/${quizData.questions.length}</p>`;
+        scoreContainer.style.display = 'block';
+      } else {
+        // Submit the selected answer
+        const correctAnswer = quizData.questions[currentQuestionIndex].answer;
+        const resultMessage = (selectedAnswer === correctAnswer) ? 'Correct!' : 'Wrong!';
+        alert(resultMessage);
+        // Move to the next question
+        navigateQuestion('next');
+      }
+    }
+
+    // Get the quizId from the URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const quizId = urlParams.get('quizId');
+
+    // Call the fetchQuizById function when the page loads
+    window.onload = async () => {
+      quizData = await fetchQuizById(quizId);
+      displayQuestion();
+    };
+  </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
