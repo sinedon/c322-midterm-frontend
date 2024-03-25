@@ -28,7 +28,7 @@
     // Fetch quizzes from the backend
     async function fetchQuizzes() {
       try {
-        const response = await fetch('http://localhost:8080/quizzes');
+        const response = await fetch('https://midterm-latest-lvx9.onrender.com');
         if (!response.ok) {
           throw new Error('Failed to fetch quizzes');
         }
